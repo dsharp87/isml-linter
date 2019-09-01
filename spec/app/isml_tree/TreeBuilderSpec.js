@@ -499,6 +499,14 @@ describe(targetObjName, () => {
 
         expect(iscontentNode.value).toEqual('<div>');
     });
+
+    it('detects a missing ">" tag closing character', () => {
+        const templatePath    = getTemplatePath(49);
+        const expectedMessage = ExceptionUtils.invalidCharacterError('<', 3, 10, 1, templatePath).message;
+        const tree            = getTreeFromTemplate(49);
+
+        expect(tree.exception.message).toEqual(expectedMessage);
+    });
 });
 
 const getTemplatePath = number => {

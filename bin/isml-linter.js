@@ -12,8 +12,8 @@ try {
         }
     }
 
-    const IsmlLinter = require('isml-linter');
-    const exitCode   = IsmlLinter.build();
+    const IsmlLinter = require('../src/app/publicApi');
+    const exitCode   = IsmlLinter.build('./cartridges');
 
     for (let i = 0; i < process.argv.length; i++) {
         process.argv[i] === '--build' && process.exit(exitCode);

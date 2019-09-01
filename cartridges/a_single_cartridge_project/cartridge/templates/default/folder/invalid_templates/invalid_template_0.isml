@@ -1,7 +1,0 @@
-<isif condition="${'true'}">
-    <div>
-</isif>
-        Some content
-<isif condition="${'true'}">
-    </div>
-</isif>

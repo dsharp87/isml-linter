@@ -64,6 +64,19 @@ const getCorrespondentClosingElementPosition = (content, parentState) => {
     throwUnbalancedElementException(internalState);
 };
 
+const maskContent = elem => {
+    let maskedContent = MaskUtils.maskInBetween(elem, 'iscomment');
+
+    maskedContent = MaskUtils.maskInBetween(maskedContent, '${', '}');
+    maskedContent = MaskUtils.maskInBetween(maskedContent, 'isscript');
+    maskedContent = MaskUtils.maskInBetweenForTagWithAttributes(maskedContent, 'script');
+    maskedContent = MaskUtils.maskInBetweenForTagWithAttributes(maskedContent, 'style');
+    maskedContent = MaskUtils.maskInBetween(maskedContent, '<!---', '--->', true);
+    maskedContent = MaskUtils.maskInBetween(maskedContent, '<!--', '-->', true);
+
+    return maskedContent;
+};
+
 const throwParseException = (previousContent, parentState) => {
     const elementType = ParseUtils.getFirstElementType(previousContent.trim());
     const lineNumber  = parentState.currentLineNumber + ParseUtils.getPrecedingEmptyLinesQty(previousContent);
@@ -214,7 +227,9 @@ const isBalanced = (content, state) => {
 
     const templatePath       = state.templatePath;
     const startingLineNumber = state.currentLineNumber;
+    const openingCharStack   = [];
     let depth                = 0;
+    let insideHtmlComment    = false;
 
     for (let i = 0; i < content.length; i++) {
         const char = content[i];
@@ -223,17 +238,11 @@ const isBalanced = (content, state) => {
         const isNextCharALetter = i !== content.length - 1 && isLetter(content[i + 1]);
 
         if (char === '<' && isNextCharALetter && depth === 0) {
+            openingCharStack.push(i);
             depth++;
             const elem                   = ParseUtils.getNextElementValue(content.substring(i));
             const currentLocalLineNumber = ParseUtils.getLineBreakQty(content.substring(0, i));
-            let maskedContent            = MaskUtils.maskInBetween(elem, 'iscomment');
-
-            maskedContent = MaskUtils.maskInBetween(maskedContent, '${', '}');
-            maskedContent = MaskUtils.maskInBetween(maskedContent, 'isscript');
-            maskedContent = MaskUtils.maskInBetweenForTagWithAttributes(maskedContent, 'script');
-            maskedContent = MaskUtils.maskInBetweenForTagWithAttributes(maskedContent, 'style');
-            maskedContent = MaskUtils.maskInBetween(maskedContent, '<!---', '--->', true);
-            maskedContent = MaskUtils.maskInBetween(maskedContent, '<!--', '-->', true);
+            const maskedContent          = maskContent(elem);
 
             const localPos     = maskedContent.substring(1).indexOf('<');
             const isCondition  = localPos !== -1;
@@ -251,9 +260,40 @@ const isBalanced = (content, state) => {
                     }
                 };
             }
+        } else if(char === '<') {
+
+            if (!insideHtmlComment) {
+                depth++;
+                openingCharStack.push(i);
+            }
+
+            if (openingCharStack.length > 0) {
+                insideHtmlComment = content.substring(i).startsWith('<!--') &&
+                                    !content.substring(i).startsWith('<!---');
+            }
         } else if (char === '>') {
             depth--;
+            openingCharStack.pop(i);
         }
+    }
+
+    if (openingCharStack.length > 0) {
+        const openingCharPos         = openingCharStack.pop();
+        const remainingContent       = content.substring(openingCharPos);
+        const elem                   = ParseUtils.getFirstElementType(remainingContent).trim();
+        const currentLocalLineNumber = ParseUtils.getLineBreakQty(content.substring(0, openingCharPos));
+        const localPos               = remainingContent.substring(1).indexOf('<');
+
+        return {
+            error: {
+                character  : '<',
+                elem       : elem,
+                lineNumber : startingLineNumber + currentLocalLineNumber + 1,
+                globalPos  : openingCharPos + localPos + 1,
+                elemLength : 1,
+                templatePath
+            }
+        };
     }
 
     return {};

@@ -1,19 +1,4 @@
-<iscomment>Reorder disponibility</iscomment>
-<div 
-    class="reorder_disponibility"
-    id="disp"
-    style="very_stylish">
-        <isif condition="${true}">
-            <div class="class_1"/>
-            <div class="class_2"/>
-        <iselse>
-            <div class="class_3"/>
-
-            <div class="class_4"/>
-        </isif>
-    </div>
-</div>
-
-
-
-<div/>
+<head>
+    <!--[if gt IE 9]><!-->
+    <!--<![endif]-->
+</head>
